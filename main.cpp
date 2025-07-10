@@ -4,14 +4,15 @@
 using namespace std;
 
 int main() {
-    int width = 800;
-    int height = 600;
-    int maxIterations = 1000;
+    int width = 15000;
+    int height = 10000;
+    int maxIterations = 10000;
 
     std::vector<unsigned char> image(width * height * 4); // image buffer
 
 
     // loop trough pixels
+    #pragma omp parallel for schedule(dynamic)
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
 
@@ -53,8 +54,34 @@ int main() {
             image[index + 1] = gval;
             image[index + 2] = bval;
             image[index + 3] = 255;
+
+            
+        }
+
+        #pragma omp critical
+        {
+            static int lastProgress = -1;  // shared among threads
+            int progress = (100 * y) / height;
+
+            if (progress % 2 == 0 && progress != lastProgress) {
+                lastProgress = progress;
+
+            // Draw progress bar
+            cout << "\rRendering: " << progress << "% [";
+
+            for (int i = 0; i < progress / 2; i++) {
+                cout << "#";
+            }
+
+            for (int i = progress / 2; i < 50; i++) {
+                cout << "_";
+            }
+
+            cout << "]" << flush;
+            }
         }
     }
+
 
     unsigned error = lodepng::encode("mandelbrot.png", image, width, height);
 
